@@ -25,6 +25,73 @@ def load_trusted_sources(filename="trusted_sources.json"):
         print(f"❌ Error pas load trusted sources: {e}")
         return []
 
+# --- Fungsi Baru Buat Nambah Artikel Trusted ---
+
+def add_trusted_article(trusted_articles_db, filename="trusted_articles.json"):
+    """
+    Fungsi buat nambah artikel trusted ke database.
+    """
+    print("\n➕ Fitur Tambah Artikel Terpercaya")
+    print("   Masukin URL artikel dari sumber terpercaya yang mau ditambahin.")
+    
+    url_to_add = input("🔗 URL Artikel: ").strip()
+    
+    if not url_to_add:
+        print("❌ URL kosong. Batal nambah artikel.")
+        return trusted_articles_db # Balikin db yang lama
+    
+    if url_to_add in trusted_articles_db:
+        print("⚠️  Artikel dengan URL ini udah ada di database.")
+        return trusted_articles_db
+
+    print("📄 Lagi ngambil teks dari URL...")
+    article_text = extract_text_from_url(url_to_add)
+    
+    if not article_text:
+        print("❌ Gagal ngambil teks. Batal nambah artikel.")
+        return trusted_articles_db
+
+    # --- Simulasi ngambil judul (bisa diimprove) ---
+    # Untuk simpelnya, kita ambil 10 kata pertama sebagai "judul"
+    title_words = article_text.split()[:10]
+    article_title = " ".join(title_words) + "..."
+    
+    # Siapin data artikel baru
+    new_article = {
+        "url": url_to_add,
+        "title": article_title,
+        "text": article_text
+    }
+    
+    # Tambahin ke database (dictionary di memory dulu)
+    trusted_articles_db[url_to_add] = new_article
+    
+    # Simpan ke file
+    try:
+        # Baca dulu data lama (kalo ada) buat ngegabung
+        try:
+            with open(filename, 'r', encoding='utf-8') as f:
+                existing_data = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            existing_data = {"articles": {}}
+        
+        # Update data articles
+        existing_data.setdefault("articles", {}).update({url_to_add: new_article})
+        
+        # Tulis ulang file
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(existing_data, f, indent=2, ensure_ascii=False)
+        
+        print(f"✅ Artikel berhasil ditambahin ke {filename}!")
+        print(f"   Judul (preview): {article_title}")
+        
+    except Exception as e:
+        print(f"❌ Error pas nyimpen ke file: {e}")
+        # Kalo gagal simpan, hapus dari memory juga
+        trusted_articles_db.pop(url_to_add, None)
+        
+    return trusted_articles_db # Balikin db yang udah diupdate
+
 def load_trusted_articles(filename="trusted_articles.json"):
     """Baca file JSON dan balikin dictionary trusted articles."""
     try:
@@ -130,8 +197,8 @@ def find_similar_trusted_articles(suspicious_text, trusted_articles_db):
 # --- Fungsi Utama (Main Program) ---
 
 def main():
-    print("\n🚀 Selamat datang di Hoax Detector (Versi 4.0)!")
-    print("   Sekarang kita baca database teks dari file JSON!\n")
+    print("\n🚀 Selamat datang di Hoax Detector (Versi 6.0)!")
+    print("   Sekarang kita bisa tambah artikel terpercaya langsung dari sini!\n")
     
     # Load daftar sumber terpercaya
     trusted_sources = load_trusted_sources()
@@ -146,8 +213,39 @@ def main():
     else:
         print(f"✅ Loaded {len(trusted_articles_db)} trusted articles from database.\n")
     
-    # Input URL dari user
-    url_input = input("🔗 Masukin URL berita yang mau di cek: ").strip()
+    # --- Menu Utama yang Diperluas ---
+    while True: # Loop biar program nggak langsung keluar
+        print("\n<Menu Utama>")
+        print("1. Cek Keaslian Berita (URL)")
+        print("2. Cek Keaslian Berita (Teks Langsung)")
+        print("3. Tambah Artikel Terpercaya")
+        print("4. Keluar")
+        choice = input("Pilihan Anda (1/2/3/4): ").strip()
+
+        if choice == "1":
+            # --- Alur Input URL ---
+            handle_url_input(trusted_sources, trusted_articles_db)
+            
+        elif choice == "2":
+            # --- Alur Input Teks Langsung ---
+            handle_text_input(trusted_articles_db)
+            
+        elif choice == "3":
+            # --- Alur Tambah Artikel Trusted ---
+            trusted_articles_db = add_trusted_article(trusted_articles_db)
+            
+        elif choice == "4":
+            print("\n👋 Terima kasih sudah menggunakan Hoax Detector!")
+            break # Keluar dari loop
+            
+        else:
+            print("❌ Pilihan nggak valid. Coba lagi.")
+
+# --- Fungsi-Fungsi Handler Buat Menu ---
+
+def handle_url_input(trusted_sources, trusted_articles_db):
+    """Handle logika input URL."""
+    url_input = input("\n🔗 Masukin URL berita yang mau di cek: ").strip()
     
     if not url_input:
         print("❌ URL kosong. Coba lagi.")
@@ -155,61 +253,82 @@ def main():
 
     print("\n🔍 Lagi ngecek URL...")
     
-    # Cek apakah URL trusted
     if is_trusted_url(url_input, trusted_sources):
         print("✅ BERITA INI DARI SUMBER TERPERCAYA!")
-        
-        # Ambil teks dari URL trusted
         print("📄 Lagi ngambil teks dari berita...")
         article_text = extract_text_from_url(url_input)
-        
         if article_text:
-            print("👀 Preview teks berita (500 karakter pertama):")
-            print("-" * 50)
-            print(article_text[:500] + ("..." if len(article_text) > 500 else ""))
-            print("-" * 50)
+            analyze_text(article_text, trusted_articles_db, is_trusted=True, source_url=url_input)
         else:
             print("⚠️  Gagal ngambil teks dari berita ini.")
-            
     else:
         print("❌ WASPADA! BERITA INI BUKAN DARI SUMBER TERPERCAYA.")
         print("   Tapi jangan panik! Kita bakal cek isinya...")
-        
-        # Ambil teks dari URL yang mencurigakan
         print("📄 Lagi ngambil teks dari berita...")
         suspicious_text = extract_text_from_url(url_input)
-        
         if suspicious_text:
-            print("👀 Preview teks berita mencurigakan (500 karakter pertama):")
-            print("-" * 50)
-            print(suspicious_text[:500] + ("..." if len(suspicious_text) > 500 else ""))
-            print("-" * 50)
-            
-            # --- Bagian Baru: Cek Kemiripan dengan Database Nyata ---
-            print("\n🧠 Lagi ngecek kemiripan dengan berita terpercaya...")
-            similarity_score, similar_url, similar_text = find_similar_trusted_articles(suspicious_text, trusted_articles_db)
-            
-            # Konversi ke persentase
-            similarity_percentage = round(similarity_score * 100, 2)
-            
-            if similarity_percentage > 70:
-                print(f"\n✅ POTENSIAL BERITA ASLI!")
-                print(f"   Kemiripan dengan berita terpercaya: {similarity_percentage}%")
-                print(f"   Berita mirip ditemukan di: {similar_url}")
-                print("   Indikator: PARTIALLY TRUE / BERITA INI MIRIP DENGAN YANG ASLI")
-            elif similarity_percentage > 30:
-                print(f"\n⚠️  BERITA MENCURIGAKAN!")
-                print(f"   Kemiripan dengan berita terpercaya: {similarity_percentage}%")
-                print(f"   Berita mirip ditemukan di: {similar_url}")
-                print("   Indikator: POTENTIALLY HOAX / BERITA INI MUNGKIN HOAX")
-            else:
-                print(f"\n🚨 BERITA SANGAT MENCURIGAKAN!")
-                print(f"   Kemiripan dengan berita terpercaya: {similarity_percentage}%")
-                print("   Indikator: HIGHLY SUSPICIOUS / KEMUNGKINAN BESAR HOAX")
-                
+            analyze_text(suspicious_text, trusted_articles_db, is_trusted=False, source_url=url_input)
         else:
             print("⚠️  Gagal ngambil teks dari berita ini.")
 
-# Jalanin fungsi utama kalo file ini di-run langsung
-if __name__ == "__main__":
-    main()
+def handle_text_input(trusted_articles_db):
+    """Handle logika input teks langsung."""
+    print("\n📝 Masukin teks berita yang mau di cek:")
+    print("(Tips: Paste teks panjang dan tekan Enter dua kali di akhir)")
+    print("-" * 50)
+    lines = []
+    while True:
+        line = input()
+        if line == "":
+            break
+        lines.append(line)
+    user_text = "\n".join(lines)
+    print("-" * 50)
+    
+    if not user_text.strip():
+        print("❌ Teks kosong. Coba lagi.")
+        return
+        
+    print("\n🧠 Lagi ngecek teks...")
+    analyze_text(user_text, trusted_articles_db, is_trusted=False, source_url="Input Teks Langsung")
+
+# --- Fungsi Baru Buat Analisis Teks (Pindahin logika dari main) ---
+
+def analyze_text(text_to_analyze, trusted_articles_db, is_trusted=False, source_url=""):
+    """
+    Fungsi terpisah buat ngeanalisis teks, baik dari URL maupun input langsung.
+    """
+    if is_trusted:
+        print("✅ BERITA INI DARI SUMBER TERPERCAYA!")
+        print("👀 Preview teks berita (500 karakter pertama):")
+        print("-" * 50)
+        print(text_to_analyze[:500] + ("..." if len(text_to_analyze) > 500 else ""))
+        print("-" * 50)
+        # Bisa ditambahin logika lain kalo perlu buat artikel trusted
+    else:
+        print("👀 Preview teks yang diinput (500 karakter pertama):")
+        print("-" * 50)
+        print(text_to_analyze[:500] + ("..." if len(text_to_analyze) > 500 else ""))
+        print("-" * 50)
+        
+        # --- Cek Kemiripan ---
+        print("\n🧠 Lagi ngecek kemiripan dengan berita terpercaya...")
+        similarity_score, similar_url, similar_text = find_similar_trusted_articles(text_to_analyze, trusted_articles_db)
+        
+        # Konversi ke persentase
+        similarity_percentage = round(similarity_score * 100, 2)
+        
+        if similarity_percentage > 70:
+            print(f"\n✅ POTENSIAL BERITA ASLI!")
+            print(f"   Kemiripan dengan berita terpercaya: {similarity_percentage}%")
+            print(f"   Berita mirip ditemukan di: {similar_url}")
+            print("   Indikator: PARTIALLY TRUE / BERITA INI MIRIP DENGAN YANG ASLI")
+        elif similarity_percentage > 30:
+            print(f"\n⚠️  BERITA MENCURIGAKAN!")
+            print(f"   Kemiripan dengan berita terpercaya: {similarity_percentage}%")
+            print(f"   Berita mirip ditemukan di: {similar_url}")
+            print("   Indikator: POTENTIALLY HOAX / BERITA INI MUNGKIN HOAX")
+        else:
+            print(f"\n🚨 BERITA SANGAT MENCURIGAKAN!")
+            print(f"   Kemiripan dengan berita terpercaya: {similarity_percentage}%")
+            print("   Indikator: HIGHLY SUSPICIOUS / KEMUNGKINAN BESAR HOAX")
