@@ -25,73 +25,6 @@ def load_trusted_sources(filename="trusted_sources.json"):
         print(f"❌ Error pas load trusted sources: {e}")
         return []
 
-# --- Fungsi Baru Buat Nambah Artikel Trusted ---
-
-def add_trusted_article(trusted_articles_db, filename="trusted_articles.json"):
-    """
-    Fungsi buat nambah artikel trusted ke database.
-    """
-    print("\n➕ Fitur Tambah Artikel Terpercaya")
-    print("   Masukin URL artikel dari sumber terpercaya yang mau ditambahin.")
-    
-    url_to_add = input("🔗 URL Artikel: ").strip()
-    
-    if not url_to_add:
-        print("❌ URL kosong. Batal nambah artikel.")
-        return trusted_articles_db # Balikin db yang lama
-    
-    if url_to_add in trusted_articles_db:
-        print("⚠️  Artikel dengan URL ini udah ada di database.")
-        return trusted_articles_db
-
-    print("📄 Lagi ngambil teks dari URL...")
-    article_text = extract_text_from_url(url_to_add)
-    
-    if not article_text:
-        print("❌ Gagal ngambil teks. Batal nambah artikel.")
-        return trusted_articles_db
-
-    # --- Simulasi ngambil judul (bisa diimprove) ---
-    # Untuk simpelnya, kita ambil 10 kata pertama sebagai "judul"
-    title_words = article_text.split()[:10]
-    article_title = " ".join(title_words) + "..."
-    
-    # Siapin data artikel baru
-    new_article = {
-        "url": url_to_add,
-        "title": article_title,
-        "text": article_text
-    }
-    
-    # Tambahin ke database (dictionary di memory dulu)
-    trusted_articles_db[url_to_add] = new_article
-    
-    # Simpan ke file
-    try:
-        # Baca dulu data lama (kalo ada) buat ngegabung
-        try:
-            with open(filename, 'r', encoding='utf-8') as f:
-                existing_data = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            existing_data = {"articles": {}}
-        
-        # Update data articles
-        existing_data.setdefault("articles", {}).update({url_to_add: new_article})
-        
-        # Tulis ulang file
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(existing_data, f, indent=2, ensure_ascii=False)
-        
-        print(f"✅ Artikel berhasil ditambahin ke {filename}!")
-        print(f"   Judul (preview): {article_title}")
-        
-    except Exception as e:
-        print(f"❌ Error pas nyimpen ke file: {e}")
-        # Kalo gagal simpan, hapus dari memory juga
-        trusted_articles_db.pop(url_to_add, None)
-        
-    return trusted_articles_db # Balikin db yang udah diupdate
-
 def load_trusted_articles(filename="trusted_articles.json"):
     """Baca file JSON dan balikin dictionary trusted articles."""
     try:
@@ -332,3 +265,74 @@ def analyze_text(text_to_analyze, trusted_articles_db, is_trusted=False, source_
             print(f"\n🚨 BERITA SANGAT MENCURIGAKAN!")
             print(f"   Kemiripan dengan berita terpercaya: {similarity_percentage}%")
             print("   Indikator: HIGHLY SUSPICIOUS / KEMUNGKINAN BESAR HOAX")
+
+# --- Fungsi Baru Buat Nambah Artikel Trusted ---
+
+def add_trusted_article(trusted_articles_db, filename="trusted_articles.json"):
+    """
+    Fungsi buat nambah artikel trusted ke database.
+    """
+    print("\n➕ Fitur Tambah Artikel Terpercaya")
+    print("   Masukin URL artikel dari sumber terpercaya yang mau ditambahin.")
+    
+    url_to_add = input("🔗 URL Artikel: ").strip()
+    
+    if not url_to_add:
+        print("❌ URL kosong. Batal nambah artikel.")
+        return trusted_articles_db # Balikin db yang lama
+    
+    if url_to_add in trusted_articles_db:
+        print("⚠️  Artikel dengan URL ini udah ada di database.")
+        return trusted_articles_db
+
+    print("📄 Lagi ngambil teks dari URL...")
+    article_text = extract_text_from_url(url_to_add)
+    
+    if not article_text:
+        print("❌ Gagal ngambil teks. Batal nambah artikel.")
+        return trusted_articles_db
+
+    # --- Simulasi ngambil judul (bisa diimprove) ---
+    # Untuk simpelnya, kita ambil 10 kata pertama sebagai "judul"
+    title_words = article_text.split()[:10]
+    article_title = " ".join(title_words) + "..."
+    
+    # Siapin data artikel baru
+    new_article = {
+        "url": url_to_add,
+        "title": article_title,
+        "text": article_text
+    }
+    
+    # Tambahin ke database (dictionary di memory dulu)
+    trusted_articles_db[url_to_add] = new_article
+    
+    # Simpan ke file
+    try:
+        # Baca dulu data lama (kalo ada) buat ngegabung
+        try:
+            with open(filename, 'r', encoding='utf-8') as f:
+                existing_data = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            existing_data = {"articles": {}}
+        
+        # Update data articles
+        existing_data.setdefault("articles", {}).update({url_to_add: new_article})
+        
+        # Tulis ulang file
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(existing_data, f, indent=2, ensure_ascii=False)
+        
+        print(f"✅ Artikel berhasil ditambahin ke {filename}!")
+        print(f"   Judul (preview): {article_title}")
+        
+    except Exception as e:
+        print(f"❌ Error pas nyimpen ke file: {e}")
+        # Kalo gagal simpan, hapus dari memory juga
+        trusted_articles_db.pop(url_to_add, None)
+        
+    return trusted_articles_db # Balikin db yang udah diupdate
+
+if __name__ == "__main__":
+    # Jalankan fungsi main() kalo file ini dieksekusi langsung
+    main()
