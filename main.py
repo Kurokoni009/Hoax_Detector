@@ -25,6 +25,22 @@ def load_trusted_sources(filename="trusted_sources.json"):
         print(f"❌ Error pas load trusted sources: {e}")
         return []
 
+def load_trusted_articles(filename="trusted_articles.json"):
+    """Baca file JSON dan balikin dictionary trusted articles."""
+    try:
+        with open(filename, 'r', encoding='utf-8') as f: # Tambahin encoding
+            data = json.load(f)
+        return data.get('articles', {}) # Pastikan key 'articles' ada
+    except FileNotFoundError:
+        print(f"❌ File {filename} nggak ketemu. Bakal dibuat baru.")
+        return {}
+    except json.JSONDecodeError:
+        print(f"❌ Format JSON di {filename} salah.")
+        return {}
+    except Exception as e:
+        print(f"❌ Error pas load trusted articles: {e}")
+        return {}
+
 def is_trusted_url(url, trusted_sources):
     """Cek apakah domain dari URL ada di daftar trusted."""
     try:
@@ -70,26 +86,24 @@ def calculate_similarity(text1, text2):
     if not text1 or not text2:
         return 0.0
     
-    # Vectorizer bakal ubah teks jadi angka yang bisa dibandingin
     vectorizer = TfidfVectorizer().fit([text1, text2])
     tfidf1 = vectorizer.transform([text1])
     tfidf2 = vectorizer.transform([text2])
     
-    # Cosine similarity ngasih nilai antara 0 (nggak mirip) sampe 1 (sama persis)
     similarity_score = cosine_similarity(tfidf1, tfidf2)[0][0]
     return similarity_score
 
-def find_similar_trusted_articles(suspicious_text, trusted_texts_db):
+def find_similar_trusted_articles(suspicious_text, trusted_articles_db):
     """
     Cek kemiripan teks mencurigakan dengan semua teks trusted.
-    Balikin skor kemiripan tertinggi dan teks trusted yang mirip.
+    Balikin skor kemiripan tertinggi dan URL dari berita trusted yang mirip.
     """
-    if not suspicious_text or not trusted_texts_db:
-        return 0.0, ""
+    if not suspicious_text or not trusted_articles_db:
+        return 0.0, "", ""
 
     # Siapin semua teks buat dibandingin
-    all_texts = list(trusted_texts_db.values()) # Isi teks trusted
-    labels = list(trusted_texts_db.keys())      # Label/URL dari teks trusted
+    all_texts = [article_data['text'] for article_data in trusted_articles_db.values()]
+    labels = list(trusted_articles_db.keys()) # URL dari teks trusted
     
     # Tambahin teks mencurigakan ke list terakhir
     all_texts.append(suspicious_text)
@@ -102,27 +116,22 @@ def find_similar_trusted_articles(suspicious_text, trusted_texts_db):
     similarities = cosine_similarity(tfidf_matrix[-1], tfidf_matrix[:-1])
     
     # Cari yang paling mirip
-    max_index = similarities.argmax()
-    max_similarity = similarities[0][max_index]
-    
-    most_similar_label = labels[max_index]
-    most_similar_text = all_texts[max_index]
-    
-    return max_similarity, most_similar_label, most_similar_text
-
-# --- Simulasi Database Teks Trusted (Untuk Testing) ---
-# Di dunia nyata, ini bakal diambil dari database atau file lain.
-TRUSTED_TEXTS_DB = {
-    "https://www.bbc.com/news/world-111111": "Scientists have discovered a new species of dinosaur in Patagonia. The fossil, believed to be 90 million years old, suggests a unique evolutionary path.",
-    "https://www.reuters.com/article/health-coronavirus-vaccine-id-222222": "A new study shows that the latest vaccine is 95% effective against the current strain of the virus. Experts call it a major breakthrough.",
-    "https://www.kompas.com/teknologi/read/333333/ai-in-indonesia": "Indonesia is investing heavily in artificial intelligence research to boost its digital economy. The government plans to build several AI research centers."
-}
+    if similarities.size > 0:
+        max_index = similarities.argmax()
+        max_similarity = similarities[0][max_index]
+        
+        most_similar_url = labels[max_index]
+        most_similar_text = all_texts[max_index] # Ini sebenarnya teks dari trusted_articles_db
+        
+        return max_similarity, most_similar_url, most_similar_text
+    else:
+        return 0.0, "", ""
 
 # --- Fungsi Utama (Main Program) ---
 
 def main():
-    print("\n🚀 Selamat datang di Hoax Detector (Versi 3.0)!")
-    print("   Sekarang kita bisa ngecek URL, ngambil teks, dan ngebandingin isinya!\n")
+    print("\n🚀 Selamat datang di Hoax Detector (Versi 4.0)!")
+    print("   Sekarang kita baca database teks dari file JSON!\n")
     
     # Load daftar sumber terpercaya
     trusted_sources = load_trusted_sources()
@@ -130,7 +139,12 @@ def main():
         print("❌ Gagal load trusted sources. Program berhenti.")
         return
 
-    print(f"✅ Loaded {len(trusted_sources)} trusted sources.\n")
+    # Load database teks terpercaya dari file
+    trusted_articles_db = load_trusted_articles()
+    if not trusted_articles_db:
+        print("⚠️  Database teks trusted masih kosong. Program tetap jalan, tapi fitur analisis terbatas.")
+    else:
+        print(f"✅ Loaded {len(trusted_articles_db)} trusted articles from database.\n")
     
     # Input URL dari user
     url_input = input("🔗 Masukin URL berita yang mau di cek: ").strip()
@@ -171,14 +185,14 @@ def main():
             print(suspicious_text[:500] + ("..." if len(suspicious_text) > 500 else ""))
             print("-" * 50)
             
-            # --- Bagian Baru: Cek Kemiripan ---
+            # --- Bagian Baru: Cek Kemiripan dengan Database Nyata ---
             print("\n🧠 Lagi ngecek kemiripan dengan berita terpercaya...")
-            similarity_score, similar_url, similar_text = find_similar_trusted_articles(suspicious_text, TRUSTED_TEXTS_DB)
+            similarity_score, similar_url, similar_text = find_similar_trusted_articles(suspicious_text, trusted_articles_db)
             
             # Konversi ke persentase
             similarity_percentage = round(similarity_score * 100, 2)
             
-            if similarity_percentage > 70: # Threshold bisa diubah
+            if similarity_percentage > 70:
                 print(f"\n✅ POTENSIAL BERITA ASLI!")
                 print(f"   Kemiripan dengan berita terpercaya: {similarity_percentage}%")
                 print(f"   Berita mirip ditemukan di: {similar_url}")

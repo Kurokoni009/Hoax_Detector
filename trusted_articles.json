@@ -1,0 +1,14 @@
+{
+  "articles": {
+    "https://www.bbc.com/news/world-111111": {
+      "url": "https://www.bbc.com/news/world-111111",
+      "title": "New Dinosaur Species Found",
+      "text": "Scientists have discovered a new species of dinosaur in Patagonia. The fossil, believed to be 90 million years old, suggests a unique evolutionary path."
+    },
+    "https://www.reuters.com/article/health-coronavirus-vaccine-id-222222": {
+      "url": "https://www.reuters.com/article/health-coronavirus-vaccine-id-222222",
+      "title": "Vaccine 95% Effective",
+      "text": "A new study shows that the latest vaccine is 95% effective against the current strain of the virus. Experts call it a major breakthrough."
+    }
+  }
+}
