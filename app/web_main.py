@@ -11,7 +11,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import importlib.util
 
-main_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "main.py")
+main_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "hoax_detector_project", "main.py")
 spec = importlib.util.spec_from_file_location("main", main_path)
 main = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(main)

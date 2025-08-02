@@ -187,6 +187,9 @@ def add_trusted_article(trusted_articles_db, filename="trusted_articles.json"):
     """
     Fungsi buat nambah artikel trusted ke database.
     """
+    import os
+    filepath = os.path.join(os.path.dirname(__file__), filename)
+    
     print("\n➕ Fitur Tambah Artikel Terpercaya")
     print("   Masukin URL artikel dari sumber terpercaya yang mau ditambahin.")
     
@@ -225,7 +228,7 @@ def add_trusted_article(trusted_articles_db, filename="trusted_articles.json"):
     try:
         # Baca dulu data lama (kalo ada) buat ngegabung
         try:
-            with open(filename, 'r', encoding='utf-8') as f:
+            with open(filepath, 'r', encoding='utf-8') as f:
                 existing_data = json.load(f)
         except (FileNotFoundError, json.JSONDecodeError):
             existing_data = {"articles": {}}
@@ -234,7 +237,7 @@ def add_trusted_article(trusted_articles_db, filename="trusted_articles.json"):
         existing_data.setdefault("articles", {}).update({url_to_add: new_article})
         
         # Tulis ulang file
-        with open(filename, 'w', encoding='utf-8') as f:
+        with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(existing_data, f, indent=2, ensure_ascii=False)
         
         print(f"✅ Artikel berhasil ditambahin ke {filename}!")
