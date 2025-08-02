@@ -12,7 +12,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 def load_trusted_sources(filename="trusted_sources.json"):
     """Baca file JSON dan balikin list trusted sources."""
     try:
-        with open(filename, 'r') as f:
+        with open(filename,  'r') as f:
             data = json.load(f)
         return data['trusted_sources']
     except FileNotFoundError:
