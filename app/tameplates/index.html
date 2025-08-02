@@ -1,0 +1,151 @@
+<!-- app/templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hoax Detector</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #333; }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        textarea { height: 150px; resize: vertical; }
+        button { background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; width: 100%; font-size: 16px; }
+        button:hover { background-color: #0056b3; }
+        .result { margin-top: 20px; padding: 15px; border-radius: 4px; }
+        .result.trusted { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .result.checked.safe { background-color: #cce5ff; border: 1px solid #99ccff; color: #004085; }
+        .result.checked.warning { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+        .result.checked.danger { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .result h3 { margin-top: 0; }
+        pre { white-space: pre-wrap; word-wrap: break-word; background: #f8f9fa; padding: 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🕵️ Hoax Detector</h1>
+        <p style="text-align: center;">Masukin URL atau teks berita untuk dicek keasliannya.</p>
+
+        <!-- Tab Navigation -->
+        <div style="display: flex; margin-bottom: 20px; border-bottom: 1px solid #ddd;">
+            <button id="tab-url" onclick="openTab('url')" style="flex:1; padding: 10px; background: #e9ecef; border: none; cursor: pointer;">Cek via URL</button>
+            <button id="tab-text" onclick="openTab('text')" style="flex:1; padding: 10px; background: #e9ecef; border: none; border-left: 1px solid #ddd; cursor: pointer;">Cek Teks Langsung</button>
+        </div>
+
+        <!-- Tab Content -->
+        <div id="url-tab" class="tab-content">
+            <div class="input-group">
+                <label for="url-input">🔗 URL Berita:</label>
+                <input type="text" id="url-input" placeholder="https://example.com/berita-penting">
+            </div>
+            <button onclick="checkUrl()">🔍 Cek Keaslian URL</button>
+        </div>
+
+        <div id="text-tab" class="tab-content" style="display:none;">
+            <div class="input-group">
+                <label for="text-input">📝 Teks Berita:</label>
+                <textarea id="text-input" placeholder="Paste teks berita di sini..."></textarea>
+            </div>
+            <button onclick="checkText()">🔍 Cek Keaslian Teks</button>
+        </div>
+
+        <!-- Result Area -->
+        <div id="result-area" class="result" style="display:none;"></div>
+    </div>
+
+    <script>
+        function openTab(tabName) {
+            document.getElementById('url-tab').style.display = tabName === 'url' ? 'block' : 'none';
+            document.getElementById('text-tab').style.display = tabName === 'text' ? 'block' : 'none';
+            document.getElementById('tab-url').style.background = tabName === 'url' ? '#007bff' : '#e9ecef';
+            document.getElementById('tab-url').style.color = tabName === 'url' ? 'white' : 'black';
+            document.getElementById('tab-text').style.background = tabName === 'text' ? '#007bff' : '#e9ecef';
+            document.getElementById('tab-text').style.color = tabName === 'text' ? 'white' : 'black';
+        }
+
+        async function checkUrl() {
+            const url = document.getElementById('url-input').value.trim();
+            const resultArea = document.getElementById('result-area');
+            if (!url) {
+                alert('Masukin URL dulu, bro!');
+                return;
+            }
+            resultArea.style.display = 'block';
+            resultArea.innerHTML = '<p>🔍 Lagi ngecek...</p>';
+            
+            try {
+                const response = await fetch('/check_url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url })
+                });
+                const data = await response.json();
+                displayResult(data);
+            } catch (error) {
+                resultArea.innerHTML = `<p style="color:red;">❌ Error: ${error.message}</p>`;
+            }
+        }
+
+        async function checkText() {
+            const text = document.getElementById('text-input').value.trim();
+            const resultArea = document.getElementById('result-area');
+            if (!text) {
+                alert('Masukin teks dulu, bro!');
+                return;
+            }
+            resultArea.style.display = 'block';
+            resultArea.innerHTML = '<p>🔍 Lagi ngecek...</p>';
+            
+            try {
+                const response = await fetch('/check_text', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+                const data = await response.json();
+                displayResult(data);
+            } catch (error) {
+                resultArea.innerHTML = `<p style="color:red;">❌ Error: ${error.message}</p>`;
+            }
+        }
+
+        function displayResult(data) {
+            const resultArea = document.getElementById('result-area');
+            if (data.error) {
+                resultArea.className = 'result';
+                resultArea.innerHTML = `<p style="color:red;">❌ Error: ${data.error}</p>`;
+                return;
+            }
+
+            let html = '';
+            if (data.status === 'trusted') {
+                resultArea.className = 'result trusted';
+                html = `
+                    <h3>✅ ${data.message}</h3>
+                    <p><strong>Preview Teks:</strong></p>
+                    <pre>${data.preview}</pre>
+                `;
+            } else if (data.status === 'checked') {
+                let indicatorClass = '';
+                if (data.indicator === 'PARTIALLY TRUE') indicatorClass = 'safe';
+                else if (data.indicator === 'POTENTIALLY HOAX') indicatorClass = 'warning';
+                else indicatorClass = 'danger';
+
+                resultArea.className = `result checked ${indicatorClass}`;
+                html = `
+                    <h3>${data.message}</h3>
+                    <p><strong>Indikator:</strong> ${data.indicator}</p>
+                    <p><strong>Kemiripan:</strong> ${data.similarity}</p>
+                    ${data.similar_url ? `<p><strong>Berita mirip:</strong> <a href="${data.similar_url}" target="_blank">${data.similar_url}</a></p>` : ''}
+                    <p><strong>Preview Teks:</strong></p>
+                    <pre>${data.preview}</pre>
+                `;
+            }
+            resultArea.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
